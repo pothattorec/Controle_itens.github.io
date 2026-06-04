@@ -57,6 +57,7 @@ body {
 
 .container {
   max-width: 900px;
+  text-align: center;
   margin: 0 auto;
   padding: 1.5rem 1rem;
 }

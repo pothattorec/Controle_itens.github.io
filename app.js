@@ -158,6 +158,13 @@ function buscarCodigo() {
  * @param {'entrada'|'saida'} tipo
  */
 function registrar(tipo) {
+
+    if (!verificarAdmin()) {
+
+        alert("Acesso restrito.");
+
+        return;
+    }
   if (!itemAtual) return;
 
   const qty  = parseInt(document.getElementById('qty-input').value) || 1;
@@ -270,6 +277,13 @@ function renderEstoque() {
 /** Valida e salva um novo material. */
 async function cadastrar() {
 
+    if (!verificarAdmin()) {
+
+        alert("Acesso restrito.");
+
+        return;
+    }
+
     const cod = document.getElementById('cad-codigo').value.trim();
     const nome = document.getElementById('cad-nome').value.trim();
     const categoria = document.getElementById('cad-categoria').value.trim();
@@ -363,6 +377,13 @@ function renderCadastros() {
 
 async function editarItem(cod) {
 
+    if (!verificarAdmin()) {
+
+        alert("Acesso restrito.");
+
+        return;
+    }
+
     const m = materiais[cod];
 
     const nome = prompt('Nome:', m.nome);
@@ -407,6 +428,13 @@ async function editarItem(cod) {
 }
 
 async function deletar(cod) {
+
+    if (!verificarAdmin()) {
+
+        alert("Acesso restrito.");
+
+        return;
+    }
 
     if (!confirm(`Remover "${materiais[cod].nome}" do cadastro?`))
         return;

@@ -545,29 +545,150 @@ function downloadFile(content, filename, type) {
 }
 
 // ============================================================
-// IMPRESSORA ZEBRA (stub — requer BrowserPrint instalado)
+// IMPRESSORA ZEBRA — modal de configuração antes de imprimir
 // ============================================================
 
+/**
+ * Abre um modal de confirmação antes de imprimir.
+ * Permite escolher a quantidade de cópias e pré-visualizar o ZPL.
+ * A impressão em si é delegada ao Impressora.js.
+ *
+ * @param {string} cod - Código de barras do material
+ */
 function imprimirEtiqueta(cod) {
-  const m = materiais[cod];
-  if (!m) return;
 
-  if (typeof zebraPrinter === 'undefined' || !zebraPrinter) {
-    alert('Impressora Zebra não conectada.\nInstale o Zebra Browser Print e recarregue a página.');
-    return;
+  const m = materiais[cod];
+  if (!m) { alert('Material não encontrado.'); return; }
+
+  // Remove modal anterior se existir
+  document.getElementById('modal-impressao')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-impressao';
+  modal.style.cssText = `
+    position:fixed; inset:0; background:rgba(0,0,0,0.45);
+    display:flex; align-items:center; justify-content:center;
+    z-index:9999; padding:1rem;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      background:var(--bg-primary); border-radius:var(--radius-lg);
+      padding:1.5rem; width:100%; max-width:420px;
+      border:0.5px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.18);
+    ">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:1rem;">
+        <i class="ti ti-printer" style="font-size:22px; color:var(--info-text);"></i>
+        <strong style="font-size:16px;">Imprimir Etiqueta</strong>
+      </div>
+
+      <div style="background:var(--bg-secondary); border-radius:var(--radius-md);
+                  padding:12px; margin-bottom:1rem; font-size:13px; line-height:1.7;">
+        <div><strong>Código:</strong> <span style="font-family:var(--font-mono)">${cod}</span></div>
+        <div><strong>Material:</strong> ${m.nome}</div>
+        <div><strong>Categoria:</strong> ${m.categoria || '—'}</div>
+      </div>
+
+      <!-- Pré-visualização da etiqueta -->
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:12px; color:var(--text-secondary); font-weight:600; margin-bottom:6px;">
+          PRÉ-VISUALIZAÇÃO
+        </div>
+        <div id="preview-etiqueta" style="
+          border:1.5px dashed var(--border-md); border-radius:var(--radius-md);
+          padding:12px; background:#fff; color:#000;
+          font-family:'Courier New',monospace; font-size:11px;
+          display:flex; flex-direction:column; align-items:center; gap:6px;
+          min-height:90px;
+        ">
+          <div style="
+            background:repeating-linear-gradient(90deg,#000 0px,#000 2px,#fff 2px,#fff 5px);
+            width:140px; height:48px; border-radius:2px;
+          "></div>
+          <div style="font-size:12px; letter-spacing:2px;">${cod}</div>
+          <div style="font-size:13px; font-weight:bold; font-family:sans-serif; text-align:center;">${m.nome}</div>
+        </div>
+      </div>
+
+      <!-- Configurações -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1.25rem;">
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">
+            Cópias
+          </label>
+          <input type="number" id="imp-copias" value="1" min="1" max="99"
+            style="width:100%; padding:8px 12px; border:0.5px solid var(--border-md);
+                   border-radius:var(--radius-md); font-size:14px; background:var(--bg-primary); color:var(--text-primary);" />
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:4px;">
+            Tamanho (mm)
+          </label>
+          <select id="imp-tamanho"
+            style="width:100%; padding:8px 12px; border:0.5px solid var(--border-md);
+                   border-radius:var(--radius-md); font-size:13px; background:var(--bg-primary); color:var(--text-primary);">
+            <option value="60x30" selected>60 × 30 mm</option>
+            <option value="80x40">80 × 40 mm</option>
+            <option value="100x50">100 × 50 mm</option>
+            <option value="50x25">50 × 25 mm</option>
+            <option value="40x25">40 × 25 mm</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Botões -->
+      <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+        <button onclick="document.getElementById('modal-impressao').remove()"
+          style="padding:9px 18px; border:0.5px solid var(--border-md);
+                 background:var(--bg-primary); border-radius:var(--radius-md);
+                 cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+          <i class="ti ti-x"></i>Cancelar
+        </button>
+        <button onclick="_confirmarImpressao('${cod}')"
+          style="padding:9px 18px; background:var(--info-bg); border:0.5px solid var(--info-border);
+                 color:var(--info-text); border-radius:var(--radius-md);
+                 cursor:pointer; font-size:13px; font-weight:600;
+                 display:inline-flex; align-items:center; gap:6px;">
+          <i class="ti ti-printer"></i>Imprimir
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Fecha clicando fora
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.remove();
+  });
+
+  document.body.appendChild(modal);
+  document.getElementById('imp-copias').focus();
+}
+
+/**
+ * Lê as configurações do modal e chama o Impressora.js.
+ */
+function _confirmarImpressao(cod) {
+  const copias   = parseInt(document.getElementById('imp-copias').value) || 1;
+  const tamanho  = document.getElementById('imp-tamanho').value; // ex: "60x30"
+  const [larg, alt] = tamanho.split('x').map(Number);
+
+  // Aplica o tamanho escolhido no objeto global do Impressora.js
+  if (typeof ETIQUETA !== 'undefined') {
+    ETIQUETA.largura_mm = larg;
+    ETIQUETA.altura_mm  = alt;
+    ETIQUETA.copias     = copias;
   }
 
-  // ZPL básico — ajuste conforme o modelo da sua impressora
-  const zpl = `^XA
-^FO50,30^BCN,80,Y,N,N^FD${cod}^FS
-^FO50,130^A0N,24,24^FD${m.nome}^FS
-^FO50,160^A0N,20,20^FDEstoque: ${m.estoque} ${m.unidade}^FS
-^XZ`;
+  document.getElementById('modal-impressao').remove();
 
-  zebraPrinter.send(zpl,
-    () => console.log('Etiqueta enviada.'),
-    (err) => { console.error(err); alert('Erro ao imprimir: ' + err); }
-  );
+  // Delega para o Impressora.js (que gera o ZPL e envia para a Zebra)
+  if (typeof gerarZPL !== 'undefined' && typeof _enviarParaImpressora !== 'undefined') {
+    const m   = materiais[cod];
+    const zpl = gerarZPL(cod, m.nome, copias);
+    _enviarParaImpressora(zpl, `${copias}× ${m.nome}`);
+  } else {
+    alert('Impressora.js não carregado. Verifique se o arquivo está incluído no index.html.');
+  }
 }
 
 // ============================================================

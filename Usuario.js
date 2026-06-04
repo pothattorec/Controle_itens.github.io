@@ -7,7 +7,7 @@ async function loginAdmin() {
 
     if (
         usuario === "admin" &&
-        senha === "123456"
+        senha === "243414"
     ) {
 
         localStorage.setItem(

@@ -15,7 +15,7 @@ let itemAtual = null;
  * Carrega materiais e histórico do localStorage.
  * Recalcula os totais do dia atual.
  */
-function loadData() {
+/**function loadData() {
   try {
     const m = localStorage.getItem('alm_materiais');
     const h = localStorage.getItem('alm_historico');
@@ -32,17 +32,81 @@ function loadData() {
   } catch (e) {
     console.error('Erro ao carregar dados:', e);
   }
+}*/
+
+async function loadData() {
+
+    try {
+
+        const { data: materiaisDB, error: erroMateriais } =
+            await db
+                .from('materiais')
+                .select('*');
+
+        if (erroMateriais) throw erroMateriais;
+
+        materiais = {};
+
+        materiaisDB.forEach(item => {
+
+            materiais[item.codigo] = {
+                nome: item.nome,
+                categoria: item.categoria,
+                unidade: item.unidade,
+                estoque: item.estoque,
+                minimo: item.minimo
+            };
+
+        });
+
+        const { data: historicoDB, error: erroHistorico } =
+            await db
+                .from('historico')
+                .select('*')
+                .order('criado_em', { ascending: false });
+
+        if (erroHistorico) throw erroHistorico;
+
+        historico = historicoDB.map(item => ({
+            codigo: item.codigo,
+            nome: item.nome,
+            qty: item.qty,
+            tipo: item.tipo,
+            resp: item.resp,
+            unidade: item.unidade,
+            ts: item.criado_em
+        }));
+
+    } catch (err) {
+
+        console.error(
+            'Erro carregando dados:',
+            err
+        );
+
+    }
 }
 
 /** Persiste materiais e histórico no localStorage. */
-function saveData() {
+/**function saveData() {
   try {
     localStorage.setItem('alm_materiais', JSON.stringify(materiais));
     localStorage.setItem('alm_historico', JSON.stringify(historico));
   } catch (e) {
     console.error('Erro ao salvar dados:', e);
   }
-}
+}*/
+
+await db
+    .from('materiais')
+    .insert([{
+        codigo,
+        nome,
+        categoria,
+        unidade,
+        estoque,
+        minimo
+    }]);
 
 // ---------- UI — Utilitários ----------
 

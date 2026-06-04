@@ -65,3 +65,47 @@ async function toggleCamera() {
 function trocarCamera() {
     // desativado por enquanto
 }
+
+let leitorCadastro = null;
+
+async function abrirCameraCadastro() {
+
+    try {
+
+        const area =
+            document.getElementById(
+                'camera-cadastro-area'
+            );
+
+        area.style.display = 'block';
+
+        leitorCadastro =
+            new ZXing.BrowserMultiFormatReader();
+
+        await leitorCadastro.decodeFromVideoDevice(
+            null,
+            'camera-cadastro-video',
+            (result) => {
+
+                if (result) {
+
+                    document.getElementById(
+                        'cad-codigo'
+                    ).value = result.getText();
+
+                    leitorCadastro.reset();
+
+                    area.style.display = 'none';
+                }
+            }
+        );
+
+    } catch (err) {
+
+        console.error(err);
+
+        alert(
+            'Erro ao abrir câmera.'
+        );
+    }
+}

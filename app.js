@@ -12,27 +12,9 @@ let itemAtual = null;
 // ---------- Persistência ----------
 
 /**
- * Carrega materiais e histórico do localStorage.
+ * Carrega materiais e histórico.
  * Recalcula os totais do dia atual.
  */
-/**function loadData() {
-  try {
-    const m = localStorage.getItem('alm_materiais');
-    const h = localStorage.getItem('alm_historico');
-    if (m) materiais = JSON.parse(m);
-    if (h) historico = JSON.parse(h);
-
-    const dHoje = new Date().toDateString();
-    hoje.entradas = historico
-      .filter(r => r.tipo === 'entrada' && new Date(r.ts).toDateString() === dHoje)
-      .reduce((acc, r) => acc + r.qty, 0);
-    hoje.saidas = historico
-      .filter(r => r.tipo === 'saida' && new Date(r.ts).toDateString() === dHoje)
-      .reduce((acc, r) => acc + r.qty, 0);
-  } catch (e) {
-    console.error('Erro ao carregar dados:', e);
-  }
-}*/
 
 async function loadData() {
 
@@ -77,36 +59,28 @@ async function loadData() {
             ts: item.criado_em
         }));
 
+        const hojeStr = new Date().toDateString();
+
+        hoje.entradas = historico
+            .filter(r =>
+                r.tipo === 'entrada' &&
+                new Date(r.ts).toDateString() === hojeStr
+            )
+            .reduce((a, b) => a + b.qty, 0);
+
+        hoje.saidas = historico
+            .filter(r =>
+                r.tipo === 'saida' &&
+                new Date(r.ts).toDateString() === hojeStr
+            )
+            .reduce((a, b) => a + b.qty, 0);
+
     } catch (err) {
 
-        console.error(
-            'Erro carregando dados:',
-            err
-        );
+        console.error(err);
 
     }
 }
-
-/** Persiste materiais e histórico no localStorage. */
-/**function saveData() {
-  try {
-    localStorage.setItem('alm_materiais', JSON.stringify(materiais));
-    localStorage.setItem('alm_historico', JSON.stringify(historico));
-  } catch (e) {
-    console.error('Erro ao salvar dados:', e);
-  }
-}*/
-
-await db
-    .from('materiais')
-    .insert([{
-        codigo,
-        nome,
-        categoria,
-        unidade,
-        estoque,
-        minimo
-    }]);
 
 // ---------- UI — Utilitários ----------
 
@@ -211,7 +185,6 @@ function registrar(tipo) {
   historico.unshift(reg);
   if (historico.length > 1000) historico.pop(); // limite de registros
 
-  saveData();
   updateStats();
   renderRecentes();
 
@@ -295,27 +268,61 @@ function renderEstoque() {
 // ---------- Cadastro ----------
 
 /** Valida e salva um novo material. */
-function cadastrar() {
-  const cod      = document.getElementById('cad-codigo').value.trim();
-  const nome     = document.getElementById('cad-nome').value.trim();
-  const categoria = document.getElementById('cad-categoria').value.trim();
-  const unidade  = document.getElementById('cad-unidade').value;
-  const estoque  = parseInt(document.getElementById('cad-estoque').value) || 0;
-  const minimo   = parseInt(document.getElementById('cad-minimo').value)  || 5;
+async function cadastrar() {
 
-  if (!cod)  { showAlert('Informe o código de barras.', 'danger', 'cad-alert'); return; }
-  if (!nome) { showAlert('Informe o nome do material.', 'danger', 'cad-alert'); return; }
-  if (materiais[cod]) {
-    showAlert(`Código já cadastrado: <strong>${materiais[cod].nome}</strong>`, 'danger', 'cad-alert');
-    return;
-  }
+    const cod = document.getElementById('cad-codigo').value.trim();
+    const nome = document.getElementById('cad-nome').value.trim();
+    const categoria = document.getElementById('cad-categoria').value.trim();
+    const unidade = document.getElementById('cad-unidade').value;
+    const estoque = parseInt(document.getElementById('cad-estoque').value) || 0;
+    const minimo = parseInt(document.getElementById('cad-minimo').value) || 5;
 
-  materiais[cod] = { nome, categoria, unidade, estoque, minimo };
-  saveData();
-  updateStats();
-  renderCadastros();
-  showAlert(`Material "<strong>${nome}</strong>" cadastrado com sucesso!`, 'success', 'cad-alert');
-  limparForm();
+    if (!cod || !nome) {
+        showAlert(
+            'Código e nome são obrigatórios.',
+            'danger',
+            'cad-alert'
+        );
+        return;
+    }
+
+    const { error } = await db
+        .from('materiais')
+        .insert([{
+            codigo: cod,
+            nome,
+            categoria,
+            unidade,
+            estoque,
+            minimo
+        }]);
+
+    if (error) {
+
+        console.error(error);
+
+        showAlert(
+            error.message,
+            'danger',
+            'cad-alert'
+        );
+
+        return;
+    }
+
+    await loadData();
+
+    updateStats();
+    renderCadastros();
+    renderEstoque();
+
+    showAlert(
+        'Material cadastrado com sucesso.',
+        'success',
+        'cad-alert'
+    );
+
+    limparForm();
 }
 
 /** Limpa todos os campos do formulário de cadastro. */
@@ -354,34 +361,74 @@ function renderCadastros() {
     </tr>`).join('');
 }
 
-/**
- * Abre prompts para editar estoque e mínimo de um material.
- * @param {string} cod - Código de barras do material
- */
-function editarItem(cod) {
-  const m = materiais[cod];
-  const novoMin = prompt(`Estoque mínimo para "${m.nome}":`, m.minimo);
-  if (novoMin === null) return;
-  const novoEst = prompt(`Estoque atual para "${m.nome}":`, m.estoque);
-  if (novoEst === null) return;
+async function editarItem(cod) {
 
-  materiais[cod].minimo   = parseInt(novoMin) || m.minimo;
-  materiais[cod].estoque  = parseInt(novoEst) || m.estoque;
-  saveData();
-  updateStats();
-  renderCadastros();
+    const m = materiais[cod];
+
+    const nome = prompt('Nome:', m.nome);
+    if (nome === null) return;
+
+    const categoria = prompt('Categoria:', m.categoria || '');
+    if (categoria === null) return;
+
+    const unidade = prompt('Unidade:', m.unidade);
+    if (unidade === null) return;
+
+    const estoque = prompt('Estoque:', m.estoque);
+    if (estoque === null) return;
+
+    const minimo = prompt('Mínimo:', m.minimo);
+    if (minimo === null) return;
+
+    const { error } = await db
+        .from('materiais')
+        .update({
+            nome,
+            categoria,
+            unidade,
+            estoque: Number(estoque),
+            minimo: Number(minimo)
+        })
+        .eq('codigo', cod);
+
+    if (error) {
+        console.error(error);
+        alert(error.message);
+        return;
+    }
+
+    await loadData();
+
+    updateStats();
+    renderCadastros();
+    renderEstoque();
+
+    alert('Material atualizado com sucesso!');
 }
 
-/**
- * Remove um material após confirmação.
- * @param {string} cod - Código de barras do material
- */
-function deletar(cod) {
-  if (!confirm(`Remover "${materiais[cod].nome}" do cadastro?`)) return;
-  delete materiais[cod];
-  saveData();
-  updateStats();
-  renderCadastros();
+async function deletar(cod) {
+
+    if (!confirm(`Remover "${materiais[cod].nome}" do cadastro?`))
+        return;
+
+    const { error } = await db
+        .from('materiais')
+        .delete()
+        .eq('codigo', cod);
+
+    if (error) {
+        console.error(error);
+        alert(error.message);
+        return;
+    }
+
+    await loadData();
+
+    updateStats();
+    renderCadastros();
+    renderEstoque();
+
+    alert('Material removido com sucesso!');
 }
 
 // ---------- Histórico ----------
@@ -428,7 +475,6 @@ function limparHistorico() {
   if (!confirm('Limpar todo o histórico de movimentações? Esta ação não pode ser desfeita.')) return;
   historico = [];
   hoje = { entradas: 0, saidas: 0 };
-  saveData();
   updateStats();
   renderRecentes();
   renderHistorico();
@@ -503,7 +549,6 @@ function processarCSV(event) {
       importados++;
     }
 
-    saveData();
     updateStats();
     renderCadastros();
     showAlert(
@@ -533,24 +578,23 @@ function downloadFile(content, filename, type) {
 }
 
 // ---------- Inicialização ----------
-document.addEventListener('DOMContentLoaded', () => {
-  // Listener do campo de scan (Enter dispara a busca)
-  document.getElementById('scan-input').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') buscarCodigo();
-  });
-
-  loadData();
-  updateStats();
-  renderRecentes();
-});
-
 document.addEventListener('DOMContentLoaded', async () => {
 
     await testarConexao();
 
-    const materiais =
-        await carregarMateriais();
+    await loadData();
 
-    console.log(materiais);
+    updateStats();
+    renderRecentes();
+    renderCadastros();
+    renderEstoque();
+
+    document.getElementById('scan-input')
+        .addEventListener('keydown', function (e) {
+
+            if (e.key === 'Enter')
+                buscarCodigo();
+
+        });
 
 });

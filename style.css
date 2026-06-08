@@ -358,3 +358,4 @@ tr.low-stock   { background: var(--warning-bg); }
   margin-right: 6px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+

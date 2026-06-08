@@ -14,3 +14,4 @@
 
 const SUPABASE_URL  = 'https://rhnhdzajlngrucmgwtfb.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_r_Q0LtwOa0s15PJJIbHgJQ_C0VGZ0o9';
+

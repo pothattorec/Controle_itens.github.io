@@ -262,7 +262,6 @@ function renderEstoque() {
       : '<span class="badge badge-success">OK</span>';
     const qtdStyle = baixo ? 'style="color:var(--warning-text);font-weight:600;"' : '';
     return `<tr class="${baixo ? 'low-stock' : ''}">
-      <td class="mono">${cod}</td>
       <td>${m.nome}</td>
       <td>${m.categoria || '—'}</td>
       <td ${qtdStyle}>${m.estoque}</td>
@@ -439,7 +438,6 @@ function renderHistorico() {
       : '<span class="badge badge-danger">↑ Saída</span>';
     return `<tr>
       <td style="font-size:12px;white-space:nowrap;">${dt}</td>
-      <td class="mono">${r.codigo}</td>
       <td>${r.nome}</td>
       <td>${r.qty} ${r.unidade || ''}</td>
       <td>${badge}</td>
@@ -454,10 +452,10 @@ function renderHistorico() {
 
 function exportarCSV() {
   if (!historico.length) { alert('Nenhum registro para exportar.'); return; }
-  const header = 'Data/Hora,Código,Material,Quantidade,Unidade,Tipo,Responsável\n';
+  const header = 'Data/Hora,Material,Quantidade,Unidade,Tipo,Responsável\n';
   const rows = historico.map(r => {
     const d = new Date(r.ts).toLocaleString('pt-BR');
-    return `"${d}","${r.codigo}","${r.nome}",${r.qty},"${r.unidade || ''}","${r.tipo}","${r.resp}"`;
+    return `"${d}","${r.nome}",${r.qty},"${r.unidade || ''}","${r.tipo}","${r.resp}"`;
   }).join('\n');
   downloadFile('\uFEFF' + header + rows,
     'almoxarifado_historico_' + new Date().toISOString().slice(0, 10) + '.csv',
@@ -710,5 +708,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     .addEventListener('keydown', e => {
       if (e.key === 'Enter') buscarCodigo();
     });
+
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+
+    await loadData();
+
+    updateStats();
+    renderRecentes();
+    renderEstoque();
+
+    // Abrir Estoque automaticamente
+    document.querySelectorAll('.section')
+        .forEach(s => s.classList.remove('active'));
+
+    document.querySelectorAll('.tab')
+        .forEach(t => t.classList.remove('active'));
+
+    document.getElementById('tab-estoque')
+        .classList.add('active');
+
+    document.querySelector(
+        '[onclick="showTab(\'estoque\', this)"]'
+    ).classList.add('active');
 
 });

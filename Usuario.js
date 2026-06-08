@@ -2,85 +2,88 @@
 
 async function loginAdmin() {
 
-    const usuario = prompt("Usuário");
-    const senha = prompt("Senha");
+    const usuario = prompt("Usuário:");
+    if (!usuario) return;
 
-    if (
-        usuario === "admin" &&
-        senha === "243414"
-    ) {
+    const senha = prompt("Senha:");
+    if (!senha) return;
 
-        localStorage.setItem(
-            "admin_logado",
-            "true"
-        );
+    const { data, error } = await db
+        .from('administradores')
+        .select('*')
+        .eq('usuario', usuario.trim())
+        .eq('senha', senha.trim());
 
-        localStorage.setItem(
-            "usuario_logado",
-            usuario
-        );
+    console.log(data);
+    console.log(error);
 
-        aplicarPermissoes();
-        atualizarUsuarioLogado();
+    if (error) {
 
-        alert("Login realizado com sucesso!");
-
-    } else {
-
-        alert("Usuário ou senha inválidos.");
+        alert("Erro: " + error.message);
+        return;
 
     }
+
+    if (!data || data.length === 0) {
+
+        alert("Usuário ou senha inválidos.");
+        return;
+
+    }
+
+    const admin = data[0];
+
+    localStorage.setItem(
+        "admin_logado",
+        "true"
+    );
+
+    localStorage.setItem(
+        "admin_nome",
+        admin.nome
+    );
+
+    atualizarUsuarioLogado();
+    aplicarPermissoes();
+
+    alert(
+        `Bem-vindo ${admin.nome}`
+    );
 }
+/* ---------- ADM logado ---------- */
 
 function atualizarUsuarioLogado() {
 
-    const nome =
-        localStorage.getItem(
-            "usuario_logado"
-        );
+    const div = document.getElementById("usuario-logado");
 
-    const area =
-        document.getElementById(
-            "usuario-logado"
-        );
+    const admin =
+        localStorage.getItem("admin_logado") === "true";
 
-    if (!area) return;
+    if (!admin) {
 
-    if (nome) {
-
-        area.innerHTML = `
-            <div style="
-                display:flex;
-                align-items:center;
-                gap:10px;
-            ">
-
-                <span>
-                    <i class="ti ti-user"></i>
-                    ${nome}
-                </span>
-
-                <button
-                    onclick="logoutAdmin()"
-                >
-                    <i class="ti ti-logout"></i>
-                    Sair
-                </button>
-
-            </div>
-        `;
-
-    } else {
-
-        area.innerHTML = `
-            <button
-                onclick="loginAdmin()"
-            >
+        div.innerHTML = `
+            <button id="btn-login" onclick="loginAdmin()">
                 <i class="ti ti-lock"></i>
                 Login Admin
             </button>
         `;
+
+        return;
     }
+
+    const nome =
+        localStorage.getItem("admin_nome");
+
+    div.innerHTML = `
+        <span style="margin-right:10px;">
+            👤 ${nome}
+        </span>
+
+        <button onclick="logoutAdmin()">
+            <i class="ti ti-logout"></i>
+            Sair
+        </button>
+    `;
 }
 
 /* ---------- Sair do ADM ---------- */

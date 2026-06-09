@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Almoxarifado — Em breve</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ===== Cabeçalho ===== -->
+  <div class="header">
+    <div class="logo"><i class="ti ti-building-warehouse"></i></div>
+    <div class="header-text">
+      <h1>Estoque</h1>
+      <p>Controle de materiais, insumos e EPIs</p>
+    </div>
+    <div id="usuario-logado"></div>
+    <div id="status-db" class="db-status db-conectando">Conectando...</div>
+
+    <!-- Botão de navegação — visível só para admin -->
+    <div id="nav-admin" style="display:none; gap:6px; flex-wrap:wrap;">
+      <a href="scanner.html" class="btn-nav">
+        <i class="ti ti-barcode"></i>Scanner / Cadastro
+      </a>
+      <a href="estoque.html" class="btn-nav">
+        <i class="ti ti-package"></i>Estoque / Histórico
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== Placeholder ===== -->
+  <div class="card" style="text-align:center; padding:4rem 2rem;">
+    <i class="ti ti-layout-grid" style="font-size:56px; color:var(--text-secondary); display:block; margin-bottom:1rem;"></i>
+    <h2 style="font-size:20px; font-weight:600; margin-bottom:8px;">Página em desenvolvimento</h2>
+    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:1.5rem;">
+      Este espaço está reservado para funcionalidades futuras do sistema.
+    </p>
+    <a href="scanner.html" style="
+      display:inline-flex; align-items:center; gap:6px;
+      padding:10px 20px; border-radius:var(--radius-md);
+      background:var(--info-bg); color:var(--info-text);
+      border:0.5px solid var(--info-border); text-decoration:none;
+      font-size:14px; font-weight:600;
+    ">
+      <i class="ti ti-arrow-left"></i>Voltar para o Scanner
+    </a>
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script src="Usuario.js"></script>
+<script>
+  // Inicialização mínima para esta página
+  document.addEventListener('DOMContentLoaded', () => {
+    testarConexao();
+    atualizarUsuarioLogado();
+    aplicarPermissoes();
+  });
+</script>
+
+</body>
+</html>

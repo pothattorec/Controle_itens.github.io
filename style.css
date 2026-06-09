@@ -359,3 +359,22 @@ tr.low-stock   { background: var(--warning-bg); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+
+/* ---------- Botão de navegação entre páginas (admin) ---------- */
+.btn-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 0.5px solid var(--info-border);
+  background: var(--info-bg);
+  color: var(--info-text);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-nav:hover { opacity: 0.8; }
+.btn-nav i { font-size: 15px; }

@@ -1,398 +1,152 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Almoxarifado — Controle de Materiais</title>
-
-  <div class="header">
-
-    <div class="logo">
-      <i class="ti ti-building-warehouse"></i>
-    </div>
-
-    <div class="header-text">
-      <h1>Almoxarifado</h1>
-      <p></p>
-    </div>
-
-    <div id="usuario-logado"></div>
-
-    <div id="status-db" class="db-status db-conectando">
-      Conectando...
-    </div>
-
-    <div id="status-impressora" class="db-status db-conectando">
-      🖨 Aguardando...
-    </div>
-
-  </div>
-
-  <!-- Ícones -->
+  <title>Almoxarifado — Estoque</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
-
-  <!-- Leitor de código de barras pela câmera -->
-  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
-
-  <!-- Zebra Browser Print (deve estar instalado no PC) -->
-  <!-- Download: https://www.zebra.com/us/en/support-downloads/printer-software/browser-print.html -->
-  <script src="http://localhost:9100/BrowserPrint-3.1.250.min.js"></script>
-
-  <!-- Estilos -->
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
-  <div class="container">
+<div class="container">
 
-    <!-- ===== Cabeçalho ===== -->
-    <div class="header">
-      <div class="logo"><i class="ti ti-building-warehouse"></i></div>
-      <div class="header-text">
-        <h1>Estoque</h1>
-        <p>Controle de materiais, insumos e EPIs</p>
-      </div>
+  <!-- ===== Cabeçalho ===== -->
+  <div class="header">
+    <div class="logo"><i class="ti ti-building-warehouse"></i></div>
+    <div class="header-text">
+      <h1>Estoque</h1>
+      <p>Relatórios e histórico de movimentações</p>
     </div>
+    <div id="usuario-logado"></div>
+    <div id="status-db" class="db-status db-conectando">Conectando...</div>
 
-    <!-- ===== Cards de estatísticas ===== -->
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-label">Total de itens</div>
-        <div class="stat-value" id="stat-total">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Entradas hoje</div>
-        <div class="stat-value success" id="stat-entradas">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Saídas hoje</div>
-        <div class="stat-value danger" id="stat-saidas">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Estoque baixo</div>
-        <div class="stat-value danger" id="stat-baixo">—</div>
-      </div>
+    <!-- Botão de navegação — visível só para admin -->
+    <div id="nav-admin" style="display:none; gap:6px; flex-wrap:wrap;">
+      <a href="scanner.html" class="btn-nav">
+        <i class="ti ti-barcode"></i>Scanner / Cadastro
+      </a>
+      <a href="futuro.html" class="btn-nav">
+        <i class="ti ti-layout-grid"></i>Em breve
+      </a>
     </div>
+  </div>
 
-    <!-- ===== Navegação por abas ===== -->
-    <div class="tabs">
-      <button class="tab active" onclick="showTab('scanner', this)">
-        <i class="ti ti-barcode"></i>Scanner
-      </button>
-      <button class="tab" onclick="showTab('estoque', this)">
-        <i class="ti ti-package"></i>Estoque
-      </button>
-      <button class="tab" onclick="showTab('cadastro', this)">
-        <i class="ti ti-plus"></i>Cadastro
-      </button>
-      <button class="tab" onclick="showTab('historico', this)">
-        <i class="ti ti-history"></i>Histórico
-      </button>
-    </div>
+  <!-- ===== Stats ===== -->
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total de itens</div><div class="stat-value" id="stat-total">—</div></div>
+    <div class="stat"><div class="stat-label">Entradas hoje</div><div class="stat-value success" id="stat-entradas">—</div></div>
+    <div class="stat"><div class="stat-label">Saídas hoje</div><div class="stat-value danger" id="stat-saidas">—</div></div>
+    <div class="stat"><div class="stat-label">Estoque baixo</div><div class="stat-value danger" id="stat-baixo">—</div></div>
+  </div>
 
-    <!-- ===================================================
-       ABA: SCANNER
-  ==================================================== -->
-    <div id="tab-scanner" class="section active">
+  <!-- ===== Tabs ===== -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('estoque', this)">
+      <i class="ti ti-package"></i>Estoque
+    </button>
+    <button class="tab" onclick="showTab('historico', this)">
+      <i class="ti ti-history"></i>Histórico
+    </button>
+  </div>
 
-      <div class="alert" id="alert-box"></div>
-
-      <div class="card">
-        <div class="card-title"><i class="ti ti-barcode"></i>Leitura de código de barras</div>
-
-        <!-- Botão câmera (destaque em mobile) -->
-        <button id="btn-camera" class="btn-camera-toggle" onclick="toggleCamera()">
-          <i class="ti ti-camera"></i>Usar câmera do celular
-        </button>
-
-        <!-- Preview da câmera -->
-        <div id="camera-area" style="display:none; margin-bottom:12px;">
-          <div class="camera-wrap">
-            <video id="camera-video" playsinline autoplay muted></video>
-            <div class="camera-overlay">
-              <div class="camera-frame"></div>
-            </div>
-            <div id="camera-status" class="camera-status">Aponte para o código de barras...</div>
-          </div>
-          <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
-            <select id="camera-select" onchange="trocarCamera()" style="flex:1;"></select>
-            <button onclick="toggleCamera()" class="btn-danger">
-              <i class="ti ti-x"></i>Fechar câmera
-            </button>
-          </div>
-        </div>
-
-        <!-- Input manual -->
-        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:8px;">
-          Ou digite / escaneie com leitor USB:
-        </p>
-        <div class="scan-row">
-          <input type="text" id="scan-input" placeholder="Código de barras..." autofocus autocomplete="off" />
-          <button class="btn-primary" onclick="buscarCodigo()">
-            <i class="ti ti-search"></i>Buscar
-          </button>
-        </div>
-
-        <!-- Preview do item encontrado -->
-        <div class="preview" id="preview-box">
-          <div class="preview-name" id="preview-nome"></div>
-          <div class="preview-info" id="preview-info"></div>
-          <div class="qty-row">
-            <label>Quantidade:</label>
-            <input type="number" id="qty-input" value="1" min="1" />
-            <label>Responsável:</label>
-            <input type="text" id="resp-input" placeholder="Nome do responsável..." />
-          </div>
-          <div class="op-btns">
-            <button class="btn-success" onclick="registrar('entrada')">
-              <i class="ti ti-arrow-bar-down"></i>Registrar Entrada
-            </button>
-            <button class="btn-danger" onclick="registrar('saida')">
-              <i class="ti ti-arrow-bar-up"></i>Registrar Saída
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Últimas movimentações -->
-      <div class="card" style="padding:0; overflow:hidden;">
-        <div style="padding:1rem 1.25rem 0.5rem; display:flex; align-items:center; justify-content:space-between;">
-          <span class="card-title" style="margin-bottom:0;">
-            <i class="ti ti-clock"></i>Últimas movimentações
-          </span>
-          <button onclick="carregarRecentes()" title="Atualizar">
-            <i class="ti ti-refresh"></i>
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>Código</th>
-                <th>Material</th>
-                <th>Qtd</th>
-                <th>Tipo</th>
-                <th>Responsável</th>
-              </tr>
-            </thead>
-            <tbody id="tb-recentes">
-              <tr>
-                <td colspan="6" class="empty">Carregando...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div><!-- /tab-scanner -->
-
-    <!-- ===================================================
+  <!-- ===================================================
        ABA: ESTOQUE
   ==================================================== -->
-    <div id="tab-estoque" class="section">
+  <div id="tab-estoque" class="section active">
 
-      <div class="search-row">
-        <input type="text" id="search-estoque" placeholder="Buscar por nome, código ou categoria..."
-          oninput="renderEstoque()" />
-        <select id="filter-estoque" onchange="renderEstoque()">
-          <option value="">Todos os itens</option>
-          <option value="baixo">Estoque baixo</option>
-          <option value="ok">Estoque OK</option>
-        </select>
-        <button onclick="carregarMateriais(true)" title="Atualizar">
-          <i class="ti ti-refresh"></i>
-        </button>
+    <div class="search-row">
+      <input type="text" id="search-estoque"
+             placeholder="Buscar por nome, código ou categoria..."
+             oninput="renderEstoque()" />
+      <select id="filter-estoque" onchange="renderEstoque()">
+        <option value="">Todos os itens</option>
+        <option value="baixo">Estoque baixo</option>
+        <option value="ok">Estoque OK</option>
+      </select>
+      <button onclick="carregarMateriais(true)" title="Atualizar">
+        <i class="ti ti-refresh"></i>
+      </button>
+      <button onclick="exportarExcelMensal()">
+        <i class="ti ti-file-spreadsheet"></i>Relatório CSV
+      </button>
+    </div>
 
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center;">Material</th>
+              <th style="text-align:center;">Categoria</th>
+              <th style="text-align:center;">Estoque</th>
+              <th style="text-align:center;">Mín.</th>
+              <th style="text-align:center;">Unidade</th>
+              <th style="text-align:center;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="tb-estoque">
+            <tr><td colspan="6" class="empty">Carregando...</td></tr>
+          </tbody>
+        </table>
       </div>
+    </div>
 
-      <div class="card" style="padding:0; overflow:hidden;">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align:center;">Material</th>
-                <th style="text-align:center;">Categoria</th>
-                <th style="text-align:center;">Estoque</th>
-                <th style="text-align:center;">Mín.</th>
-                <th style="text-align:center;">Unidade</th>
-                <th style="text-align:center;">Status</th>
-              </tr>
-            </thead>
-            <tbody id="tb-estoque">
-              <tr>
-                <td colspan="7" class="empty">Carregando...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  </div><!-- /tab-estoque -->
 
-    </div><!-- /tab-estoque -->
-
-    <!-- ===================================================
-       ABA: CADASTRO
-  ==================================================== -->
-    <div id="tab-cadastro" class="section">
-
-      <div class="card">
-        <div class="card-title"><i class="ti ti-plus"></i>Cadastrar novo material</div>
-        <div class="form-grid">
-          <div class="form-field">
-            <label>Código de barras *</label>
-
-            <div style="display:flex; gap:8px;">
-              <input type="text" id="cad-codigo" placeholder="Ex: 7891234567890" autocomplete="off" style="flex:1;" />
-
-              <button type="button" onclick="abrirCameraCadastro()" title="Ler código de barras">
-                <i class="ti ti-camera"></i>
-              </button>
-            </div>
-          </div>
-          <div id="camera-cadastro-area" style="display:none; margin-top:10px;">
-            <video id="camera-cadastro-video" autoplay playsinline muted style="width:100%; border-radius:8px;"></video>
-          </div>
-          <div class="form-field">
-            <label>Nome do material *</label>
-            <input type="text" id="cad-nome" placeholder="Ex: Parafuso M6 x 20mm" />
-          </div>
-          <div class="form-field">
-            <label>Categoria</label>
-            <input type="text" id="cad-categoria" placeholder="Ex: Fixadores, Elétrico..." />
-          </div>
-          <div class="form-field">
-            <label>Unidade de medida</label>
-            <select id="cad-unidade">
-              <option value="un">un — unidade</option>
-              <option value="cx">cx — caixa</option>
-              <option value="m">m — metro</option>
-              <option value="kg">kg — quilograma</option>
-              <option value="g">g — grama</option>
-              <option value="L">L — litro</option>
-              <option value="ml">ml — mililitro</option>
-              <option value="par">par</option>
-              <option value="rolo">rolo</option>
-              <option value="pct">pct — pacote</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>Estoque inicial</label>
-            <input type="number" id="cad-estoque" value="0" min="0" />
-          </div>
-          <div class="form-field">
-            <label>Estoque mínimo (alerta)</label>
-            <input type="number" id="cad-minimo" value="5" min="0" />
-          </div>
-        </div>
-        <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
-          <button class="btn-primary" onclick="cadastrar()">
-            <i class="ti ti-device-floppy"></i>Salvar material
-          </button>
-          <button onclick="limparForm()">
-            <i class="ti ti-x"></i>Limpar
-          </button>
-        </div>
-        <div class="alert" id="cad-alert" style="margin-top:12px;"></div>
-      </div>
-
-      <div class="card" style="padding:0; overflow:hidden;">
-        <div
-          style="padding:1rem 1.25rem 0.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-          <span class="card-title" style="margin-bottom:0;">
-            <i class="ti ti-package"></i>Materiais cadastrados (<span id="total-cad">0</span>)
-          </span>
-          <div style="display:flex; gap:8px;">
-            <button onclick="importarCSV()" title="Importar CSV">
-              <i class="ti ti-upload"></i>Importar CSV
-            </button>
-            <button onclick="exportarMateriais()" title="Exportar materiais">
-              <i class="ti ti-download"></i>Exportar
-            </button>
-          </div>
-          <input type="file" id="file-input" accept=".csv" style="display:none;" onchange="processarCSV(event)" />
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Nome</th>
-                <th>Categoria</th>
-                <th>Und.</th>
-                <th>Estoque</th>
-                <th>Mín.</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tb-cadastros">
-              <tr>
-                <td colspan="7" class="empty">Carregando...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div><!-- /tab-cadastro -->
-
-    <!-- ===================================================
+  <!-- ===================================================
        ABA: HISTÓRICO
   ==================================================== -->
-    <div id="tab-historico" class="section">
+  <div id="tab-historico" class="section">
 
-      <div class="hist-filters">
-        <select id="hist-tipo" onchange="renderHistorico()">
-          <option value="">Todos os tipos</option>
-          <option value="entrada">Somente entradas</option>
-          <option value="saida">Somente saídas</option>
-        </select>
-        <input type="text" id="hist-busca" placeholder="Buscar por material, código ou responsável..."
-          oninput="renderHistorico()" />
-        <button onclick="carregarHistorico(true)">
-          <i class="ti ti-refresh"></i>Atualizar
-        </button>
-        <button onclick="exportarCSV()">
-          <i class="ti ti-download"></i>Exportar CSV
-        </button>
+    <div class="hist-filters">
+      <select id="hist-tipo" onchange="renderHistorico()">
+        <option value="">Todos os tipos</option>
+        <option value="entrada">Somente entradas</option>
+        <option value="saida">Somente saídas</option>
+      </select>
+      <input type="text" id="hist-busca"
+             placeholder="Buscar por material, código ou responsável..."
+             oninput="renderHistorico()" />
+      <button onclick="carregarHistorico(true)">
+        <i class="ti ti-refresh"></i>Atualizar
+      </button>
+      <button onclick="exportarCSV()">
+        <i class="ti ti-download"></i>Exportar CSV
+      </button>
+    </div>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="text-align:center;">Data/Hora</th>
+              <th style="text-align:center;">Material</th>
+              <th style="text-align:center;">Qtd</th>
+              <th style="text-align:center;">Tipo</th>
+              <th style="text-align:center;">Responsável</th>
+            </tr>
+          </thead>
+          <tbody id="tb-historico">
+            <tr><td colspan="5" class="empty">Carregando...</td></tr>
+          </tbody>
+        </table>
       </div>
+    </div>
 
-      <div class="card" style="padding:0; overflow:hidden;">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="text-align:center;">Data/Hora</th>
-                <th style="text-align:center;">Material</th>
-                <th style="text-align:center;">Qtd</th>
-                <th style="text-align:center;">Tipo</th>
-                <th style="text-align:center;">Responsável</th>
-              </tr>
-            </thead>
-            <tbody id="tb-historico">
-              <tr>
-                <td colspan="6" class="empty">Carregando...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  </div><!-- /tab-historico -->
 
-    </div><!-- /tab-historico -->
+</div><!-- /container -->
 
-  </div><!-- /container -->
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <script src="config.js"></script>
-  <script src="supabase.js"></script>
-  <script src="database.js"></script>
-  <script src="scanner.js"></script>
-  <script src="Usuario.js"></script>
-  <script src="app.js"></script>
-  <script src="Impressora.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script src="database.js"></script>
+<script src="Usuario.js"></script>
+<script src="relatorio.js"></script>
+<script src="app.js"></script>
 
 </body>
-
 </html>
